@@ -1,0 +1,55 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1792329090684,
+      "tag": "20261018131130_extensions",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792329096894,
+      "tag": "20261018131136_core_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792329122943,
+      "tag": "20261018131202_security_foundation",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792330503833,
+      "tag": "20261018133503_single_employee_user_link",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792331932036,
+      "tag": "20261018135852_modules_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792331939410,
+      "tag": "20261018135859_modules_security",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792336873510,
+      "tag": "20261018152113_knowledge_source_hash",
+      "breakpoints": true
+    }
+  ]
+}

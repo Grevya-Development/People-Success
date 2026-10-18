@@ -1,0 +1,1 @@
+ALTER TABLE "knowledge_chunks" ADD COLUMN "source_hash" text DEFAULT '' NOT NULL;
