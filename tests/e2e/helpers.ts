@@ -31,7 +31,9 @@ export async function signUpWithOrganization(page: Page, opts: { name: string; e
   await page.getByLabel("Password").fill(PASSWORD);
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page.getByText("Check your inbox")).toBeVisible();
-  await page.goto(await linkFromEmail(opts.email, "/auth/confirm"));
+  // Supabase builds links from its site URL; open them on the server under test.
+  const link = new URL(await linkFromEmail(opts.email, "/auth/confirm"));
+  await page.goto(link.pathname + link.search);
   await expect(page).toHaveURL(/\/setup\/organization/);
   await page.getByLabel("Organization name").fill(opts.org);
   await page.getByLabel("Registered legal name").fill(`${opts.org} Private Limited`);

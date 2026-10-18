@@ -20,7 +20,7 @@ const plusDays = (iso: string, n: number) => {
 /** Flow D: request → policy/balance check → manager approval → ledger and balance update. */
 test("employee applies for leave, manager approves, balance is deducted", async ({ page }) => {
   const fx = JSON.parse(
-    execFileSync("npx", ["tsx", "--tsconfig", "tsconfig.worker.json", "--env-file=.env.local", "tests/e2e/fixtures/leave-org.ts"], { encoding: "utf8" }),
+    execFileSync("npx", ["tsx", "--tsconfig", "tsconfig.worker.json", "--env-file-if-exists=.env.test.local", "--env-file-if-exists=.env.local", "tests/e2e/fixtures/leave-org.ts"], { encoding: "utf8" }),
   ) as Fixture;
   const from = nextMonday(10);
   const to = plusDays(from, 1);

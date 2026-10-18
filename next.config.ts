@@ -4,6 +4,8 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   poweredByHeader: false,
+  // Lets the E2E server (local Supabase) run beside the normal dev server.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   // Self-contained server bundle for the Docker image.
   output: "standalone",
   serverExternalPackages: ["postgres"],
