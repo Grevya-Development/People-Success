@@ -4,6 +4,8 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/server/db/client";
 import {
   attendanceDays,
+  benefitEnrollments,
+  benefitPlans,
   disbursements,
   documents,
   employees,
@@ -33,6 +35,7 @@ import { createDownloadLink } from "@/server/services/documents/documents";
 import { withSystem } from "@/server/db/tx";
 import { createEmployeeSchema } from "@/lib/validation/employees";
 import { LOCK_CONFIRMATION } from "@/lib/validation/payroll";
+import { postBenefitDeductions } from "@/server/services/benefits/deductions";
 import { addMember, contextFor, createOwnedTenant } from "../helpers/fixtures";
 
 const employeeInput = (over: Record<string, unknown>) =>
@@ -167,6 +170,13 @@ describe("payroll end to end", () => {
   });
 
   it("calculates the regular run idempotently and excludes the settled employee", async () => {
+    // Ravi has a salary-deducted benefit: its deduction must calculate, not fail on an unknown component.
+    const [plan] = await db
+      .insert(benefitPlans)
+      .values({ tenantId: org.tenant.id, name: "Group Health Top-up", kind: "health", employeeContribution: 25000, deductFromSalary: true })
+      .returning();
+    await db.insert(benefitEnrollments).values({ tenantId: org.tenant.id, planId: plan.id, employeeId: e2, status: "enrolled", effectiveFrom: "2025-04-01" });
+    expect((await postBenefitDeductions(org.tenant.id)).posted).toBe(1);
     const { run } = await createRegularRun(payroll, periodId);
     runId = run.id;
     expect((await createRegularRun(payroll, periodId)).created).toBe(false);
@@ -185,6 +195,9 @@ describe("payroll end to end", () => {
     const ravi = rows.find((r) => r.employeeId === e2)!;
     // Ravi: 98,200 + reimbursement 1,500.50 + referral 5,000 = 1,04,700.50 gross.
     expect(ravi.grossEarnings).toBe(10470050);
+    const raviLines = (await getRunEmployeeDetail(payroll, ravi.id)).lines;
+    expect(raviLines.find((l) => l.componentCode === "BENEFIT_GROUP_HEALTH_TOP_UP")?.amount).toBe(25000);
+    expect(ravi.totalDeductions - asha.totalDeductions).toBe(25000);
     const [r] = await db.select().from(payrollRuns).where(eq(payrollRuns.id, runId));
     expect(r.status).toBe("calculated");
     expect(r.usesUnverifiedRules).toBe(true);

@@ -1,7 +1,8 @@
 import "server-only";
 import { and, eq, gt, isNull, lte, or, sql } from "drizzle-orm";
 import { withSystem } from "../../db/tx";
-import { benefitEnrollments, benefitPlans, employees, payrollInputs, payrollPeriods } from "../../db/schema";
+import type { Tx } from "../../db/client";
+import { benefitEnrollments, benefitPlans, employees, payComponents, payrollInputs, payrollPeriods } from "../../db/schema";
 
 export const BENEFIT_SOURCE = "benefit_enrollment";
 
@@ -13,6 +14,36 @@ export function benefitComponentCode(planName: string) {
     .replace(/^_+|_+$/g, "")
     .slice(0, 32);
   return `BENEFIT_${slug || "PLAN"}`;
+}
+
+/**
+ * Each plan posts under its own deduction component; the payroll engine
+ * rejects unknown components, so create it on first use. Post-tax, outside
+ * CTC and outside PF/ESI/PT wages.
+ */
+async function ensureBenefitComponents(tx: Tx, tenantId: string, plans: Map<string, string>) {
+  if (!plans.size) return;
+  await tx
+    .insert(payComponents)
+    .values(
+      [...plans].map(([code, planName]) => ({
+        tenantId,
+        code,
+        name: `${planName} (employee contribution)`.slice(0, 120),
+        kind: "deduction" as const,
+        calculation: "fixed" as const,
+        isTaxable: false,
+        isPartOfCtc: false,
+        pfWage: false,
+        esiWage: false,
+        ptWage: false,
+        prorate: false,
+        payslipLabel: planName.slice(0, 60),
+        sortOrder: 270,
+        isSystem: true,
+      })),
+    )
+    .onConflictDoNothing({ target: [payComponents.tenantId, payComponents.code] });
 }
 
 export const periodKey = (year: number, month: number) => `${year}-${String(month).padStart(2, "0")}`;
@@ -57,6 +88,7 @@ export async function postBenefitDeductions(tenantId: string) {
         );
       considered += rows.length;
       if (!rows.length) continue;
+      await ensureBenefitComponents(tx, tenantId, new Map(rows.map((r) => [benefitComponentCode(r.planName), r.planName])));
       const key = periodKey(period.year, period.month);
       const inserted = await tx
         .insert(payrollInputs)

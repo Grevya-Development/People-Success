@@ -277,7 +277,10 @@ export async function submitSurveyResponse(ctx: RequestContext, input: z.output<
       locationId: emp?.locationId ?? null,
       tenureBand: emp ? tenureBand(emp.joiningDate, today) : null,
       answers: check.answers,
-      submittedOn: today,
+      // Anonymous: never store the real response day. Participants keep their
+      // own respondedOn (for reminders), so a real date here would let anyone
+      // with database access match a response to the people who answered that day.
+      submittedOn: s.isAnonymous ? (s.opensOn ?? today) : today,
     });
     return { respondedOn: today };
   });

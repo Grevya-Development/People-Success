@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db } from "@/server/db/client";
-import { departments, legalEntities, oneOnOnes, successionPlans, surveyParticipants, surveyResponses } from "@/server/db/schema";
+import { departments, legalEntities, oneOnOnes, successionPlans, surveyParticipants, surveyResponses, surveys } from "@/server/db/schema";
 import { createEmployee } from "@/server/services/employees/mutations";
 import { closeSurvey, getSurveyForResponse, launchSurvey, listSurveys, saveSurvey, submitSurveyResponse } from "@/server/services/talent/engagement/surveys";
 import { surveyResults, textThemeSummary } from "@/server/services/talent/engagement/results";
@@ -87,6 +87,8 @@ describe("engagement and people success", () => {
     await expectCode(saveSurvey(people[1].ctx, surveySchema.parse({ title: "x", questions: [{ id: "a", label: "a", type: "scale" }] })), "FORBIDDEN");
     const launched = await launchSurvey(hr, surveyId);
     expect(launched.participants).toBe(4);
+    // Backdate the opening so a stored real response day would show up.
+    await db.update(surveys).set({ opensOn: "2026-01-05" }).where(eq(surveys.id, surveyId));
     expect((await listSurveys(people[1].ctx)).map((s) => s.id)).toContain(surveyId);
 
     await submitSurveyResponse(people[1].ctx, { surveyId, answers: { valued: 4, enps: 9, comment: "Great team culture and growth" } });
@@ -98,7 +100,8 @@ describe("engagement and people success", () => {
     expect(rows).toHaveLength(2);
     for (const r of rows) {
       expect(r.employeeId).toBeNull();
-      expect(r.submittedOn).toBe(todayIn());
+      // Anonymous responses carry the survey's opening day, never the real response day.
+      expect(r.submittedOn).toBe("2026-01-05");
       expect(r.departmentId).toBe(deptX);
       expect(r.tenureBand).toBe("3y+");
       expect(Object.keys(r)).not.toContain("participantId");
